@@ -1,2 +1,5 @@
 metar
 requests
+pillow
+python-dateutil
+tzlocal
