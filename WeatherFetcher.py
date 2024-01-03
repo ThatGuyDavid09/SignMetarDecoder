@@ -21,5 +21,5 @@ class WeatherFetcher:
     def get_weather_icon_url(self):
         weather = self.get_local_weather()
         icon_url = weather["current"]["condition"]["icon"].replace("64", "128")
-        print(icon_url)
+        # print(icon_url)
         return icon_url
