@@ -73,8 +73,8 @@ metar_req_text = metar_req.text
 metar_date, metar_text = [i.strip() for i in metar_req_text.strip().split("\n")]
 metar = Metar(metar_text)
 
-metar = Metar(
-    "METAR KLOU 021753Z 24008G22KT 10SM +RA -TSRA FZFG FZHZ FZBR FEW123 OVC456 02/M03 A3029 RMK AO2 SLP261 T00221028 10028 20011 58016")
+# metar = Metar(
+#     "METAR KLOU 021753Z 24008G22KT 10SM +RA -TSRA FZFG FZHZ FZBR FEW123 OVC456 02/M03 A3029 RMK AO2 SLP261 T00221028 10028 20011 58016")
 
 # metar_decoded = metar.string()
 
