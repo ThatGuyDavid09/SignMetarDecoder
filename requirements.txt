@@ -3,3 +3,4 @@ requests
 pillow
 python-dateutil
 tzlocal
+geocoder
