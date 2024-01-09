@@ -20,15 +20,36 @@ s.headers.update({"X-Access-Token": token})
 # print(json.loads(s.get(base_url + "/playlists/Main Slideshow").text))
 headers = {
     'accept': 'application/json',
+    "X-Access-Token": token,
     # requests won't add a boundary if this header is set when you pass files=
-    'Content-Type': 'multipart/form-data',
-    "X-Access-Token": token
+    # 'Content-Type': 'multipart/form-data',
 }
 
 files = {
-    'Upload file': ('latest_metar.png', open('img_out/latest_metar.png', 'rb'), 'image/png'),
+    # 'Upload file': ('latest_metar.png', open('img_out/latest_metar.png', 'rb'), 'image/png')
+    'Upload file': ("latest_metar.png", open('img_out/latest_metar.png', 'rb'), "image/png")
 }
 
-response = s.post('https://flightclub502.pisignage.com/api/files', headers=headers, files=files)
-print(response.text)
-print(response.status_code)
+response = requests.post(base_url + "/files", headers=headers, files=files)
+# print(response.text)
+# print(response.status_code)
+json_file = json.loads(response.text)
+# json_file = 
+postupload_data = {
+    "files": json_file["data"],
+    "categories": [
+        "string"
+    ]
+}
+
+playlist_data = {"filename":"latest_metar.png","duration":15,"selected":True,"option":{"main":False},"dragSelected":False,"fullscreen":True,"expired":False,"deleted":False}
+
+main_playlist_res = requests.get("https://flightclub502.pisignage.com/api/playlists/Main%20Slideshow", headers=headers)
+main_playlist_json = json.loads(main_playlist_res.text)
+amended_assets = list(main_playlist_json["data"]["assets"])
+amended_assets.append(playlist_data)
+print(amended_assets)
+
+change_playlist = requests.post("https://flightclub502.pisignage.com/api/playlists/Main%20Slideshow", headers=headers, json=amended_assets)
+
+print(change_playlist.text)
