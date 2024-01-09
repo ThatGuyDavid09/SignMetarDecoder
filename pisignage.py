@@ -1,55 +1,142 @@
+import sys
+from datetime import datetime
+
 import requests
 import json
 
-with open("passwords.txt", "r", encoding="utf-8") as f:
-    password = f.readline().strip().split("=")[-1]
 
-s = requests.Session()
-base_headers = {"Content-Type":"application/json", "Accept":"application/json"}
-s.headers.update(base_headers)
-base_url = "https://flightclub502.pisignage.com/api"
-data = {
-    "email":"karen.harrell@flightclub502.org",
-    "password": password,
-    "getToken": True
-}
-login_r = s.post(base_url + "/session", json=data)
-login_json = json.loads(login_r.text)
-token = login_json["token"]
-s.headers.update({"X-Access-Token": token})
-# print(json.loads(s.get(base_url + "/playlists/Main Slideshow").text))
-headers = {
-    'accept': 'application/json',
-    "X-Access-Token": token,
-    # requests won't add a boundary if this header is set when you pass files=
-    # 'Content-Type': 'multipart/form-data',
-}
+class PiSignageDeployer:
+    def __init__(self):
+        with open("passwords.txt", "r", encoding="utf-8") as f:
+            password = f.readline().strip().split("=")[-1]
+            if password:
+                print(f"[INFO {str(datetime.now())}] Read password")
+            else:
+                print(f"[INFO {str(datetime.now())}] No password")
+                sys.exit(-1)
 
-files = {
-    # 'Upload file': ('latest_metar.png', open('img_out/latest_metar.png', 'rb'), 'image/png')
-    'Upload file': ("latest_metar.png", open('img_out/latest_metar.png', 'rb'), "image/png")
-}
+            # s = requests.Session()
+            # base_headers = {"Content-Type": "application/json", "Accept": "application/json"}
+            # s.headers.update(base_headers)
+            self.base_url = "https://flightclub502.pisignage.com/api"
+            login_data = {
+                "email": "karen.harrell@flightclub502.org",
+                "password": password,
+                "getToken": True
+            }
+            login_r = requests.post(self.base_url + "/session", json=login_data)
+            if login_r.ok:
+                print(f"[INFO {str(datetime.now())}] Fetched token")
+            else:
+                print(f"[ERROR {str(datetime.now())}] Token fetch failed, check auth, status {login_r.status_code}")
+                print(login_r.text)
+                sys.exit(-1)
 
-response = requests.post(base_url + "/files", headers=headers, files=files)
-# print(response.text)
-# print(response.status_code)
-json_file = json.loads(response.text)
-# json_file = 
-postupload_data = {
-    "files": json_file["data"],
-    "categories": [
-        "string"
-    ]
-}
+            login_json = json.loads(login_r.text)
+            self.token = login_json["token"]
+            # s.headers.update({"X-Access-Token": token})
+            # print(json.loads(s.get(base_url + "/playlists/Main Slideshow").text))
 
-playlist_data = {"filename":"latest_metar.png","duration":15,"selected":True,"option":{"main":False},"dragSelected":False,"fullscreen":True,"expired":False,"deleted":False}
+            self.headers = {
+                'accept': 'application/json',
+                "X-Access-Token": self.token,
+                # requests won't add a boundary if this header is set when you pass files=
+                # 'Content-Type': 'multipart/form-data',
+            }
 
-main_playlist_res = requests.get("https://flightclub502.pisignage.com/api/playlists/Main%20Slideshow", headers=headers)
-main_playlist_json = json.loads(main_playlist_res.text)
-amended_assets = list(main_playlist_json["data"]["assets"])
-amended_assets.append(playlist_data)
-print(amended_assets)
+    def deploy_image(self, image_path):
+        response_del = requests.delete(self.base_url + "/files/latest_metar.png", headers=self.headers)
+        if response_del.ok:
+            print(f"[INFO {str(datetime.now())}] Deleted old METAR image")
+        else:
+            print(f"[WARNING {str(datetime.now())}] Old METAR image delete fail, status {response_del.status_code}")
+            print(response_del.text)
 
-change_playlist = requests.post("https://flightclub502.pisignage.com/api/playlists/Main%20Slideshow", headers=headers, json=amended_assets)
+        files = {
+            # 'Upload file': ('latest_metar.png', open('img_out/latest_metar.png', 'rb'), 'image/png')
+            'Upload file': ("latest_metar.png", open(image_path, 'rb'), "image/png")
+        }
 
-print(change_playlist.text)
+        response_img = requests.post(self.base_url + "/files", headers=self.headers, files=files)
+        if response_img.ok:
+            print(f"[INFO {str(datetime.now())}] Uploaded new METAR image")
+        else:
+            print(f"[ERROR {str(datetime.now())}] New METAR image upload fail, status {response_img.status_code}")
+            print(response_img.text)
+            sys.exit(-1)
+
+        # print(response.text)
+        # print(response.status_code)
+        json_file = json.loads(response_img.text)
+        # json_file =
+
+        postupload_data = {
+            "files": json_file["data"],
+            "categories": [
+                "string"
+            ]
+        }
+        post_r = requests.post(self.base_url + "/postupload", headers=self.headers, json=postupload_data)
+        if post_r.ok:
+            print(f"[INFO {str(datetime.now())}] New METAR image queued for processing")
+        else:
+            print(f"[WARNING {str(datetime.now())}] New METAR image processing queue fail, status {post_r.status_code}")
+            print(post_r.text)
+        # print(post_r.text)
+
+        playlist_data = {
+            "filename": "latest_metar.png",
+            "duration": 15,
+            "selected": True,
+            "option": {"main": False},
+            "dragSelected": False,
+            "fullscreen": True,
+            "expired": False,
+            "deleted": False
+        }
+
+        main_playlist_res = requests.get(self.base_url + "/playlists/Main%20Slideshow", headers=self.headers)
+        if main_playlist_res.ok:
+            print(f"[INFO {str(datetime.now())}] Old playlist fetched")
+        else:
+            print(f"[ERROR {str(datetime.now())}] Old playlist fetch fail, status {main_playlist_res.status_code}")
+            print(main_playlist_res.text)
+            sys.exit(-1)
+        main_playlist_json = json.loads(main_playlist_res.text)
+        amended_assets = list(main_playlist_json["data"]["assets"])
+
+        for index, item in enumerate(amended_assets):
+            if item["filename"].lower() == "latest_metar.png":
+                amended_assets.pop(index)
+
+        amended_assets.append(playlist_data)
+        # print(amended_assets)
+
+        change_json = {
+            "assets": amended_assets
+        }
+        change_playlist = requests.post(self.base_url + "/playlists/Main%20Slideshow", headers=self.headers,
+                                        json=change_json)
+        if change_playlist.ok:
+            print(f"[INFO {str(datetime.now())}] Playlist updated")
+        else:
+            print(f"[ERROR {str(datetime.now())}] Playlist update fail, status {change_playlist.status_code}")
+            print(change_playlist.text)
+            sys.exit(-1)
+        # cng_json = json.loads(change_playlist.text)
+        # print(change_playlist.text)
+        # print(cng_json["data"]["assets"])
+
+        deploy_r = requests.post(
+            self.base_url + '/groups/6329aec82e6eea773f2373a6',
+            headers=self.headers,
+            json={"deploy": True},
+        )
+        if deploy_r.ok:
+            print(f"[INFO {str(datetime.now())}] Playlist deployed")
+        else:
+            print(f"[ERROR {str(datetime.now())}] Playlist deploy fail, status {deploy_r.status_code}")
+            print(deploy_r.text)
+            sys.exit(-1)
+        # deploy_json = json.loads(deploy_r.text)
+        # print(deploy_r.text)

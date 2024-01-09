@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 import math
 import textwrap
 from io import BytesIO
@@ -12,6 +12,7 @@ import geocoder
 from requests import HTTPError
 
 from WeatherFetcher import WeatherFetcher
+from pisignage import PiSignageDeployer
 
 
 def get_most_cloud(metar):
@@ -78,20 +79,24 @@ def compose_metar_string(metar: Metar):
 def get_metar():
     metar_url = "http://tgftp.nws.noaa.gov/data/observations/metar/stations/KLOU.TXT"
     metar_req = requests.get(metar_url)
-    if metar_req.status_code != 200:
-        raise HTTPError(f"Metar fetch fail, {metar_req.status_code}")
+    if metar_req.ok:
+        print(f"[INFO {str(datetime.now())}] METAR fetched")
+    else:
+        print(f"[ERROR {str(datetime.now())}] METAR fetch fail, status {metar_req.status_code}")
+        print(metar_req.text)
+        sys.exit(-1)
     metar_req_text = metar_req.text
     metar_date, metar_text = [i.strip() for i in metar_req_text.strip().split("\n")]
     metar = Metar(metar_text)
 
-    #metar = Metar(
+    # metar = Metar(
     #    "METAR KLOU 021753Z 06008G22KT 10SM +RA -TSRA FZFG FZHZ FZBR FEW123 OVC456 02/M03 A3029 RMK AO2 SLP261 T00221028 10028 20011 58016")
 
     # metar_decoded = metar.string()
     return metar
 
 
-def create_image(metar, metar_decoded, template, icon):
+def create_image(metar, metar_decoded, template):
     img = Image.open(template, 'r').convert('RGBA')
     imgdraw = ImageDraw.Draw(img)
 
@@ -149,16 +154,25 @@ def get_current_weather_icon(weather_fetcher):
     icon = Image.open(BytesIO(icon_r.content))
     return icon
 
-def main():
-    with open("keys.txt", "r", encoding="utf-8") as f:
-        weather_api_key = f.readline().split("=")[-1]
 
-    weather_fetcher = WeatherFetcher(weather_api_key)
-    icon = get_current_weather_icon(weather_fetcher)
+def deploy_pisignage(image_path):
+    deployer = PiSignageDeployer()
+    deployer.deploy_image(image_path)
+
+
+def main():
+    print(f"[INFO {str(datetime.now())}] Started")
+    # with open("keys.txt", "r", encoding="utf-8") as f:
+    #     weather_api_key = f.readline().split("=")[-1]
+
+    # weather_fetcher = WeatherFetcher(weather_api_key)
+    # icon = get_current_weather_icon(weather_fetcher)
 
     metar = get_metar()
     most_cloud = get_most_cloud(metar)
     metar_decoded = compose_metar_string(metar)
+
+    print(f"[INFO {str(datetime.now())}] METAR decoded")
 
     template = f"image_bases/{most_cloud}.png"
 
@@ -168,8 +182,13 @@ def main():
     # print(metar_decoded)
     # print(most_cloud)
     # print(template)
-    img = create_image(metar, metar_decoded, template, icon)
+    img = create_image(metar, metar_decoded, template)
     img.save(f'img_out/latest_metar.png')
+    print(f"[INFO {str(datetime.now())}] METAR image saved")
+    deploy_pisignage("img_out/latest_metar.png")
+    print(f"[INFO {str(datetime.now())}] METAR image deployed to PiSignage")
+    print(f"[INFO {str(datetime.now())}] Exiting")
+    print("---------------------------------------------")
 
 
 if __name__ == "__main__":
