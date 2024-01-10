@@ -13,7 +13,7 @@ import geocoder
 from requests import HTTPError
 
 from WeatherFetcher import WeatherFetcher
-from pisignage import PiSignageDeployer
+from PiSignageDeployer import PiSignageDeployer
 
 
 def get_ceiling(metar):
@@ -169,7 +169,7 @@ def create_image(metar, metar_decoded, template):
 
     img.alpha_composite(arrow, base_center)
 
-    font = ImageFont.truetype("C:/Windows/Fonts/Calibril.ttf", 48)
+    font = ImageFont.truetype("C:/Windows/Fonts/Calibri.ttf", 48)
 
     margin = offset = 100
     for line in textwrap.wrap(metar.code, width=72):
@@ -232,6 +232,7 @@ def main():
     img = create_image(metar, metar_decoded, template)
     img.save(f'img_out/latest_metar.png')
     print(f"[INFO {str(datetime.now())}] METAR image saved")
+
     deploy_pisignage("img_out/latest_metar.png")
     print(f"[INFO {str(datetime.now())}] METAR image deployed to PiSignage")
     print(f"[INFO {str(datetime.now())}] Exiting")
