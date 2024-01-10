@@ -278,7 +278,7 @@ class PiSignageDeployer:
             print(deploy_r.text)
             sys.exit(-1)
         # deploy_json = json.loads(deploy_r.text)
-        print(deploy_r.text)
+        # print(deploy_r.text)
 
 if __name__ == "__main__":
     psd = PiSignageDeployer()
