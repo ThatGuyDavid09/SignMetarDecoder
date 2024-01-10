@@ -1,5 +1,6 @@
 import sys
 from datetime import datetime
+import time
 
 import requests
 import json
@@ -133,11 +134,142 @@ class PiSignageDeployer:
         # cng_json = json.loads(change_playlist.text)
         # print(change_playlist.text)
         # print(cng_json["data"]["assets"])
+        deploy_data = {
+            "sleep": {
+                "enable": False,
+                "ontime": "07:00",
+                "offtime": "21:00"
+            },
+            "reboot": {
+                "enable": False
+            },
+            "kioskUi": {
+                "enable": False
+            },
+            "showClock": {
+                "enable": False,
+                "format": "12",
+                "position": "bottom"
+            },
+            "monitorArrangement": {
+                "mode": "mirror",
+                "reverse": False
+            },
+            "emergencyMessage": {
+                "msg": "",
+                "hPos": "middle",
+                "vPos": "middle"
+            },
+            "createdBy": {
+                "_id": "6329aec82e6eea773f23739a",
+                "name": "flightclub502"
+            },
+            "_id": "6329aec82e6eea773f2373a6",
+            "playlists": [
+                {
+                "name": "Main Slideshow",
+                "settings": {
+                    "ads": {
+                    "adPlaylist": False,
+                    "adCount": 1,
+                    "adInterval": 60
+                    },
+                    "audio": {
+                    "enable": False,
+                    "random": False,
+                    "volume": 50
+                    }
+                },
+                "skipForSchedule": False,
+                "plType": "regular"
+                }
+            ],
+            "combineDefaultPlaylist": False,
+            "playAllEligiblePlaylists": False,
+            "shuffleContent": False,
+            "alternateContent": False,
+            "timeToStopVideo": 0,
+            "assetsValidity": [],
+            "deployedPlaylists": [
+                {
+                "name": "Main Slideshow",
+                "settings": {
+                    "ads": {
+                    "adPlaylist": False,
+                    "adCount": 1,
+                    "adInterval": 60
+                    },
+                    "audio": {
+                    "enable": False,
+                    "random": False,
+                    "volume": 50
+                    }
+                },
+                "skipForSchedule": False,
+                "plType": "regular"
+                }
+            ],
+            "labels": [],
+            "deployEveryday": False,
+            "enableMpv": False,
+            "mpvAudioDelay": "0",
+            "selectedVideoPlayer": "default",
+            "disableWebUi": False,
+            "disableWarnings": False,
+            "enablePio": False,
+            "disableAp": False,
+            "installation": "flightclub502",
+            "orientation": "landscape",
+            "animationEnable": False,
+            "animationType": None,
+            "resizeAssets": True,
+            "videoKeepAspect": False,
+            "videoShowSubtitles": False,
+            "imageLetterboxed": True,
+            "signageBackgroundColor": "#000",
+            "urlReloadDisable": True,
+            "keepWeblinksInMemory": False,
+            "loadPlaylistOnCompletion": True,
+            "resolution": "auto",
+            "omxVolume": 100,
+            "logo": None,
+            "logox": 10,
+            "logoy": 10,
+            "name": "default",
+            "createdAt": datetime.now().strftime(r"%Y-%m-%dT%H:%M:%S.%fZ"),
+            "__v": 133,
+            "playlistToSchedule": "Flight Club 502 Logo",
+            "deployedTicker": {
+                "enable": False,
+                "behavior": "scroll",
+                "textSpeed": 3,
+                "rss": {
+                "enable": False,
+                "link": None,
+                "feedDelay": 10
+                }
+            },
+            "lastDeployed": str(time.time() * 1000),
+            "deployTime": None,
+            "ticker": {
+                "enable": False,
+                "behavior": "scroll",
+                "textSpeed": 3,
+                "rss": {
+                "enable": False,
+                "link": None,
+                "feedDelay": 10
+                }
+            },
+            "disableHwWidgets": False,
+            "deploy": True,
+            "exportAssets": False
+            }
 
         deploy_r = requests.post(
             self.base_url + '/groups/6329aec82e6eea773f2373a6',
             headers=self.headers,
-            json={"deploy": True},
+            json={"deploy": True, "loadPlaylistOnCompletion": True},
         )
         if deploy_r.ok:
             print(f"[INFO {str(datetime.now())}] Playlist deployed")
@@ -146,4 +278,8 @@ class PiSignageDeployer:
             print(deploy_r.text)
             sys.exit(-1)
         # deploy_json = json.loads(deploy_r.text)
-        # print(deploy_r.text)
+        print(deploy_r.text)
+
+if __name__ == "__main__":
+    psd = PiSignageDeployer()
+    psd.deploy_image("img_out/latest_metar.png")
