@@ -15,6 +15,31 @@ from WeatherFetcher import WeatherFetcher
 from pisignage import PiSignageDeployer
 
 
+def get_ceiling(metar):
+    ceil = 99999999
+    ceil_layers = ["BKN", "OVC"]
+    
+    for layer in metar.sky:
+        if layer[0] in ceil_layers:
+            ceil = min(ceil, layer[1].value())
+    return (ceil)
+
+
+def get_flight_condition(metar):
+    visibility = metar.vis.value()
+    ceiling = get_ceiling(metar)
+
+    if visibility >= 5 and ceiling >= 3000:
+        return "VFR"
+    elif visibility >= 3 and ceiling >= 1000:
+        return "MVFR"
+    elif visibility >= 1 and ceiling >= 500:
+        return "IFR"
+    else:
+        return "LIFR"
+
+
+
 def get_most_cloud(metar):
     if not metar.sky:
         return "CLR"
@@ -39,8 +64,13 @@ def get_most_cloud(metar):
 
 
 def compose_metar_string(metar: Metar):
+    conditions = get_flight_condition(metar)
+    if conditions == "LIFR":
+        conditions = "Low IFR"
+    
     metar_txt = ""
     metar_txt += f"Time: {metar.time.strftime(r'%H:%M')} Z\n"
+    metar_txt += f"Flight condition: {conditions}\n" 
     metar_txt += f"Temp: {round(metar.temp.value())} °C, Dew point: {round(metar.dewpt.value())} °C\n"
     metar_txt += f"Wind: {metar.wind()}\n"
     metar_txt += f"Visibility: {metar.visibility()}\n"
@@ -102,6 +132,12 @@ def create_image(metar, metar_decoded, template):
 
     # icon = icon.resize((500, 500))
     # img.alpha_composite(icon, (700, 100))
+
+    cloud = get_most_cloud(metar)
+
+    cloud_img = Image.open(f"image_bases/{cloud}.png")
+
+    img.alpha_composite(cloud_img, (0, 0))
 
     runways = Image.open("image_bases/KLOU_runways.png")
     rwy_size_base = 400
@@ -169,12 +205,13 @@ def main():
     # icon = get_current_weather_icon(weather_fetcher)
 
     metar = get_metar()
-    most_cloud = get_most_cloud(metar)
+    # most_cloud = get_most_cloud(metar)
+    flight_condition = get_flight_condition(metar)
     metar_decoded = compose_metar_string(metar)
 
     print(f"[INFO {str(datetime.now())}] METAR decoded")
 
-    template = f"image_bases/{most_cloud}.png"
+    template = f"image_bases/{flight_condition}.png"
 
     # metar_decoded = "\n".join([i for i in metar_decoded.split("\n")])
     # print(metar_date)
