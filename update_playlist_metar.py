@@ -44,7 +44,7 @@ def compose_metar_string(metar: Metar):
     metar_txt += f"Temp: {round(metar.temp.value())} °C, Dew point: {round(metar.dewpt.value())} °C\n"
     metar_txt += f"Wind: {metar.wind()}\n"
     metar_txt += f"Visibility: {metar.visibility()}\n"
-    metar_txt += f"Altimeter: {metar.press.value()} inHg\n"
+    metar_txt += f"Altimeter: {metar.press.value():.2f} inHg\n"
 
     sky_mapping = {
         "CLR": "clear",
