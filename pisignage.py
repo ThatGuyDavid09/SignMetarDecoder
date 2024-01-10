@@ -87,7 +87,7 @@ class PiSignageDeployer:
 
         playlist_data = {
             "filename": "latest_metar.png",
-            "duration": 15,
+            "duration": 30,
             "selected": True,
             "option": {"main": False},
             "dragSelected": False,
