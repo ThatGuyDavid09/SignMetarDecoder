@@ -1,5 +1,6 @@
 from datetime import datetime
 import math
+import os
 import textwrap
 from io import BytesIO
 
@@ -196,7 +197,16 @@ def deploy_pisignage(image_path):
     deployer.deploy_image(image_path)
 
 
+def check_log_file_size():
+    path = r"logs/sign_metar_run_log.txt"
+    file_size_mb = os.stat(path).st_size  / (1024 * 1024)
+    if file_size_mb > 50:
+        with open(path, "r") as f:
+            f.truncate()
+
+
 def main():
+    check_log_file_size()
     print(f"[INFO {str(datetime.now())}] Started")
     # with open("keys.txt", "r", encoding="utf-8") as f:
     #     weather_api_key = f.readline().split("=")[-1]
