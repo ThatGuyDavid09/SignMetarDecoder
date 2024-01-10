@@ -134,6 +134,9 @@ class PiSignageDeployer:
         # cng_json = json.loads(change_playlist.text)
         # print(change_playlist.text)
         # print(cng_json["data"]["assets"])
+        assets_names_only = [asset["filename"] for asset in amended_assets]
+        assets_names_only.append("__Main Slideshow.json")
+        assets_names_only.append("custom_layout.html")
         deploy_data = {
             "sleep": {
                 "enable": False,
@@ -190,6 +193,7 @@ class PiSignageDeployer:
             "alternateContent": False,
             "timeToStopVideo": 0,
             "assetsValidity": [],
+            "assets": assets_names_only,
             "deployedPlaylists": [
                 {
                 "name": "Main Slideshow",
@@ -264,12 +268,12 @@ class PiSignageDeployer:
             "disableHwWidgets": False,
             "deploy": True,
             "exportAssets": False
-            }
+        }
 
         deploy_r = requests.post(
             self.base_url + '/groups/6329aec82e6eea773f2373a6',
             headers=self.headers,
-            json={"deploy": True, "loadPlaylistOnCompletion": True},
+            json=deploy_data,
         )
         if deploy_r.ok:
             print(f"[INFO {str(datetime.now())}] Playlist deployed")
