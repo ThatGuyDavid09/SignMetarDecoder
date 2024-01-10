@@ -105,9 +105,16 @@ class PiSignageDeployer:
         main_playlist_json = json.loads(main_playlist_res.text)
         amended_assets = list(main_playlist_json["data"]["assets"])
 
-        for index, item in enumerate(amended_assets):
-            if item["filename"].lower() == "latest_metar.png":
+        index = 0
+        while index < len(amended_assets):
+            if amended_assets[index]["filename"].lower() == "latest_metar.png":
                 amended_assets.pop(index)
+                index -= 1
+            index += 1
+        # for index, item in enumerate(amended_assets):
+            # if item["filename"].lower() == "latest_metar.png":
+            #     amended_assets.pop(index)
+                
 
         amended_assets.append(playlist_data)
         # print(amended_assets)
