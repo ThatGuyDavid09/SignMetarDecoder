@@ -8,27 +8,29 @@ from metar.Metar import Metar
 import requests
 import sys
 from PIL import Image, ImageDraw, ImageFont
-from dateutil import tz
-import geocoder
-from requests import HTTPError
 
-from WeatherFetcher import WeatherFetcher
 from PiSignageDeployer import PiSignageDeployer
 
 
 def get_ceiling(metar):
+    """
+    Given METAR, calculates highest ceiling. A ceiling is a cloud layer of Broken or Overcast.  
+    """
     ceil = 99999999
     ceil_layers = ["BKN", "OVC"]
     
     for layer in metar.sky:
         if layer[0] in ceil_layers:
             ceil = min(ceil, layer[1].value())
-    return (ceil)
+    return ceil
 
 
 def get_flight_condition(metar):
-    visibility = metar.vis.value()
-    ceiling = get_ceiling(metar)
+    """
+    Given METAR, calculates whether flight is VFR, MVFR, IFR, or LIFR
+    """
+    visibility = metar.vis.value() # In miles
+    ceiling = get_ceiling(metar) # In feet
 
     if visibility >= 5 and ceiling >= 3000:
         return "VFR"
@@ -42,6 +44,9 @@ def get_flight_condition(metar):
 
 
 def get_most_cloud(metar):
+    """
+    Finds the densest cloud level type, from Clear to Overcast.
+    """
     if not metar.sky:
         return "CLR"
 
@@ -65,6 +70,9 @@ def get_most_cloud(metar):
 
 
 def compose_metar_string(metar: Metar):
+    """
+    Given METAR, decodes it and converts it into a string.
+    """
     conditions = get_flight_condition(metar)
     if conditions == "LIFR":
         conditions = "Low IFR"
@@ -86,6 +94,7 @@ def compose_metar_string(metar: Metar):
         "OVC": "overcast"
     }
 
+    # Maps return value of cloud levels (CLR, BKN, etc) to actual words
     if metar.sky_conditions():
         for i, cond in enumerate(metar.sky):
             if cond[0] == "CLR" or cond[0] == "SKC":
@@ -95,6 +104,7 @@ def compose_metar_string(metar: Metar):
             if i == 0:
                 metar_txt += f"Sky: {sky_mapping[cond[0]]} at {format(int(cond[1].value()), ',')} ft\n"
             else:
+                # Spaces account for font differences
                 metar_txt += f"        {sky_mapping[cond[0]]} at {format(int(cond[1].value()), ',')} ft\n"
 
     if metar.present_weather():
@@ -102,12 +112,16 @@ def compose_metar_string(metar: Metar):
             if i == 0:
                 metar_txt += f"Weather: {weather}\n"
             else:
+                # Spaces account for font differences
                 metar_txt += f"                  {weather}\n"
 
     return metar_txt
 
 
 def get_metar():
+    """
+    Gets METAR from internet
+    """
     metar_url = "http://tgftp.nws.noaa.gov/data/observations/metar/stations/KLOU.TXT"
     metar_req = requests.get(metar_url)
     if metar_req.ok:
@@ -117,9 +131,11 @@ def get_metar():
         print(metar_req.text)
         sys.exit(-1)
     metar_req_text = metar_req.text
+    # Website returns metar date and actual metar on different lines, so this extracts metar only
     metar_date, metar_text = [i.strip() for i in metar_req_text.strip().split("\n")]
     metar = Metar(metar_text)
 
+    # Commented out, this is for testing
     # metar = Metar(
     #    "METAR KLOU 021753Z 06008G22KT 10SM +RA -TSRA FZFG FZHZ FZBR FEW123 OVC456 02/M03 A3029 RMK AO2 SLP261 T00221028 10028 20011 58016")
 
@@ -127,7 +143,15 @@ def get_metar():
     return metar
 
 
-def create_image(metar, metar_decoded, template):
+def create_image(metar):
+    """
+    Generates the actual metar image
+    """
+    flight_condition = get_flight_condition(metar)
+    metar_decoded = compose_metar_string(metar)
+    print(f"[INFO {str(datetime.now())}] METAR decoded")
+
+    template = f"image_bases/{flight_condition}.png"
     img = Image.open(template, 'r').convert('RGBA')
     imgdraw = ImageDraw.Draw(img)
 
@@ -138,6 +162,7 @@ def create_image(metar, metar_decoded, template):
 
     cloud_img = Image.open(f"image_bases/{cloud}.png")
 
+    # Cloud image is same size as base image, so just draw corrent cloud layer on top
     img.alpha_composite(cloud_img, (0, 0))
 
     runways = Image.open("image_bases/KLOU_runways.png")
@@ -148,6 +173,7 @@ def create_image(metar, metar_decoded, template):
 
     arrow = Image.open("image_bases/black_arrow.png")
     arrow = arrow.resize((150, int(arrow.size[1] * (150 / arrow.size[0]))))
+    # Rotates arrow in wind direction, taking into account the way the arrow is already facing
     arrow = arrow.rotate(-(90 + metar.wind_dir.value()), expand=True)
 
     rwy_width, rwy_height = runways.size
@@ -160,6 +186,7 @@ def create_image(metar, metar_decoded, template):
     arrow_center_x = arrow_width // 2
     arrow_center_y = arrow_height // 2
 
+    # Offsets arrow from center of runway image based on wind direction
     base_center = [rwy_pos_x - arrow_center_x, rwy_pos_y - arrow_center_y]
     offset_amt = 330
     wind_radians = math.radians(metar.wind_dir.value())
@@ -172,11 +199,13 @@ def create_image(metar, metar_decoded, template):
     font = ImageFont.truetype("C:/Windows/Fonts/Calibri.ttf", 48)
 
     margin = offset = 100
+    # Wraps text of METAR to ensure it fits on image
     for line in textwrap.wrap(metar.code, width=72):
         imgdraw.text((margin, offset), line, font=font, fill="#000000")
         offset += 48
 
     offset += 48
+    # Writes each line of font
     for line in metar_decoded.split("\n"):
         imgdraw.text((margin, offset), line, font=font, fill="#000000")
         offset += 55
@@ -185,19 +214,25 @@ def create_image(metar, metar_decoded, template):
     return img
 
 
-def get_current_weather_icon(weather_fetcher):
-    icon_url = f"https:{weather_fetcher.get_weather_icon_url()}"
-    icon_r = requests.get(icon_url)
-    icon = Image.open(BytesIO(icon_r.content))
-    return icon
+# def get_current_weather_icon(weather_fetcher):
+#     icon_url = f"https:{weather_fetcher.get_weather_icon_url()}"
+#     icon_r = requests.get(icon_url)
+#     icon = Image.open(BytesIO(icon_r.content))
+#     return icon
 
 
 def deploy_pisignage(image_path):
+    """
+    Deploys the image to PiSignage
+    """
     deployer = PiSignageDeployer()
     deployer.deploy_image(image_path)
 
 
 def check_log_file_size():
+    """
+    Erases logs when log file > 50mb in size
+    """
     path = r"logs/sign_metar_run_log.txt"
     file_size_mb = os.stat(path).st_size  / (1024 * 1024)
     if file_size_mb > 50:
@@ -215,13 +250,6 @@ def main():
     # icon = get_current_weather_icon(weather_fetcher)
 
     metar = get_metar()
-    # most_cloud = get_most_cloud(metar)
-    flight_condition = get_flight_condition(metar)
-    metar_decoded = compose_metar_string(metar)
-
-    print(f"[INFO {str(datetime.now())}] METAR decoded")
-
-    template = f"image_bases/{flight_condition}.png"
 
     # metar_decoded = "\n".join([i for i in metar_decoded.split("\n")])
     # print(metar_date)
@@ -229,7 +257,7 @@ def main():
     # print(metar_decoded)
     # print(most_cloud)
     # print(template)
-    img = create_image(metar, metar_decoded, template)
+    img = create_image(metar)
     img.save(f'img_out/latest_metar.png')
     print(f"[INFO {str(datetime.now())}] METAR image saved")
 

@@ -8,6 +8,7 @@ import json
 
 class PiSignageDeployer:
     def __init__(self):
+        # Loads PiSignage password from file
         with open("passwords.txt", "r", encoding="utf-8") as f:
             password = f.readline().strip().split("=")[-1]
             if password:
@@ -19,6 +20,8 @@ class PiSignageDeployer:
             # s = requests.Session()
             # base_headers = {"Content-Type": "application/json", "Accept": "application/json"}
             # s.headers.update(base_headers)
+            
+            # Makes request to get auth token 
             self.base_url = "https://flightclub502.pisignage.com/api"
             login_data = {
                 "email": "karen.harrell@flightclub502.org",
@@ -33,11 +36,13 @@ class PiSignageDeployer:
                 print(login_r.text)
                 sys.exit(-1)
 
+            # Saves token
             login_json = json.loads(login_r.text)
             self.token = login_json["token"]
             # s.headers.update({"X-Access-Token": token})
             # print(json.loads(s.get(base_url + "/playlists/Main Slideshow").text))
 
+            # Creates base headers for all requests
             self.headers = {
                 'accept': 'application/json',
                 "X-Access-Token": self.token,
@@ -46,6 +51,7 @@ class PiSignageDeployer:
             }
 
     def deploy_image(self, image_path):
+        # Deletes old latest_metar image
         response_del = requests.delete(self.base_url + "/files/latest_metar.png", headers=self.headers)
         if response_del.ok:
             print(f"[INFO {str(datetime.now())}] Deleted old METAR image")
@@ -53,6 +59,7 @@ class PiSignageDeployer:
             print(f"[WARNING {str(datetime.now())}] Old METAR image delete fail, status {response_del.status_code}")
             print(response_del.text)
 
+        # Uploads latest metar image
         files = {
             # 'Upload file': ('latest_metar.png', open('img_out/latest_metar.png', 'rb'), 'image/png')
             'Upload file': ("latest_metar.png", open(image_path, 'rb'), "image/png")
@@ -71,6 +78,7 @@ class PiSignageDeployer:
         json_file = json.loads(response_img.text)
         # json_file =
 
+        # API says we have to call this "postupload" thing based on some info from file response, so we do that
         postupload_data = {
             "files": json_file["data"],
             "categories": [
@@ -85,6 +93,7 @@ class PiSignageDeployer:
             print(post_r.text)
         # print(post_r.text)
 
+        # Data for the latest_metar as an asset on the playlist
         playlist_data = {
             "filename": "latest_metar.png",
             "duration": 30,
@@ -96,6 +105,7 @@ class PiSignageDeployer:
             "deleted": False
         }
 
+        # Get the old playlist info
         main_playlist_res = requests.get(self.base_url + "/playlists/Main%20Slideshow", headers=self.headers)
         if main_playlist_res.ok:
             print(f"[INFO {str(datetime.now())}] Old playlist fetched")
@@ -104,8 +114,10 @@ class PiSignageDeployer:
             print(main_playlist_res.text)
             sys.exit(-1)
         main_playlist_json = json.loads(main_playlist_res.text)
+        # Extract old assets
         amended_assets = list(main_playlist_json["data"]["assets"])
 
+        # Remove any asset called "latest_metar"
         index = 0
         while index < len(amended_assets):
             if amended_assets[index]["filename"].lower() == "latest_metar.png":
@@ -116,10 +128,11 @@ class PiSignageDeployer:
             # if item["filename"].lower() == "latest_metar.png":
             #     amended_assets.pop(index)
                 
-
+        # Add our latest_metar asset data
         amended_assets.append(playlist_data)
         # print(amended_assets)
 
+        # Upload the change back to the API
         change_json = {
             "assets": amended_assets
         }
@@ -134,6 +147,8 @@ class PiSignageDeployer:
         # cng_json = json.loads(change_playlist.text)
         # print(change_playlist.text)
         # print(cng_json["data"]["assets"])
+        
+        # Create deploy request data. Most of this is probably unnecesary, but I do not know which parts
         assets_names_only = [asset["filename"] for asset in amended_assets]
         assets_names_only.append("__Main Slideshow.json")
         assets_names_only.append("custom_layout.html")
@@ -233,6 +248,7 @@ class PiSignageDeployer:
             "signageBackgroundColor": "#000",
             "urlReloadDisable": True,
             "keepWeblinksInMemory": False,
+            # This part is important. It makes sure the playlist deploys after the latest one completes
             "loadPlaylistOnCompletion": True,
             "resolution": "auto",
             "omxVolume": 100,
@@ -240,6 +256,7 @@ class PiSignageDeployer:
             "logox": 10,
             "logoy": 10,
             "name": "default",
+            # This is also important.
             "createdAt": datetime.now().strftime(r"%Y-%m-%dT%H:%M:%S.%fZ"),
             "__v": 133,
             "playlistToSchedule": "Flight Club 502 Logo",
@@ -253,6 +270,7 @@ class PiSignageDeployer:
                 "feedDelay": 10
                 }
             },
+            # This is also important.
             "lastDeployed": str(time.time() * 1000),
             "deployTime": None,
             "ticker": {
@@ -269,8 +287,10 @@ class PiSignageDeployer:
             "deploy": True,
             "exportAssets": False
         }
-
+        
+        # Make the actual deploy request
         deploy_r = requests.post(
+            # This group ID is for the defailt group
             self.base_url + '/groups/6329aec82e6eea773f2373a6',
             headers=self.headers,
             json=deploy_data,
