@@ -113,7 +113,7 @@ def compose_metar_string(metar: Metar):
                 metar_txt += f"Weather: {weather}\n"
             else:
                 # Spaces account for font differences
-                metar_txt += f"                  {weather}\n"
+                metar_txt += f"                 {weather}\n"
 
     return metar_txt
 
@@ -138,6 +138,8 @@ def get_metar():
     # Commented out, this is for testing
     # metar = Metar(
     #    "METAR KLOU 021753Z 06008G22KT 10SM +RA -TSRA FZFG FZHZ FZBR FEW123 OVC456 02/M03 A3029 RMK AO2 SLP261 T00221028 10028 20011 58016")
+    # metar = Metar(
+    #    "METAR KLOU 021753Z 09008G22KT 10SM  FEW123 OVC456 02/M03 A3029 RMK AO2 SLP261 T00221028 10028 20011 58016")
 
     # metar_decoded = metar.string()
     return metar
@@ -151,23 +153,24 @@ def create_image(metar):
     metar_decoded = compose_metar_string(metar)
     print(f"[INFO {str(datetime.now())}] METAR decoded")
 
-    template = f"image_bases/{flight_condition}.png"
+    # template = f"image_bases/{flight_condition}.png"
+    template = f"image_bases/metar_base.png"
     img = Image.open(template, 'r').convert('RGBA')
     imgdraw = ImageDraw.Draw(img)
 
     # icon = icon.resize((500, 500))
     # img.alpha_composite(icon, (700, 100))
 
-    cloud = get_most_cloud(metar)
+    # cloud = get_most_cloud(metar)
 
-    cloud_img = Image.open(f"image_bases/{cloud}.png")
+    # cloud_img = Image.open(f"image_bases/{cloud}.png")
 
-    # Cloud image is same size as base image, so just draw corrent cloud layer on top
-    img.alpha_composite(cloud_img, (0, 0))
+    # # Cloud image is same size as base image, so just draw corrent cloud layer on top
+    # img.alpha_composite(cloud_img, (0, 0))
 
     runways = Image.open("image_bases/KLOU_runways.png")
     rwy_size_base = 400
-    rwy_pos_base = (1100, 450)
+    rwy_pos_base = (1200, 450)
     runways = runways.resize((rwy_size_base, int(runways.size[1] * (rwy_size_base / runways.size[0]))))
     img.alpha_composite(runways, rwy_pos_base)
 
@@ -196,19 +199,24 @@ def create_image(metar):
 
     img.alpha_composite(arrow, base_center)
 
-    font = ImageFont.truetype("C:/Windows/Fonts/Calibri.ttf", 48)
+    font_size = 50
+    font = ImageFont.truetype(r"C:/Windows/Fonts/Timesbd.ttf", font_size)
 
     margin = offset = 100
     # Wraps text of METAR to ensure it fits on image
-    for line in textwrap.wrap(metar.code, width=72):
-        imgdraw.text((margin, offset), line, font=font, fill="#000000")
-        offset += 48
+    for line in textwrap.wrap(metar.code, width=60):
+        imgdraw.text((margin, offset), line, font=font, fill="#FFFFFF")
+        offset += font_size
 
-    offset += 48
+    offset += font_size
     # Writes each line of font
-    for line in metar_decoded.split("\n"):
-        imgdraw.text((margin, offset), line, font=font, fill="#000000")
-        offset += 55
+    split_decoded = metar_decoded.split("\n")
+    if len(split_decoded) > 12:
+        split_decoded = split_decoded[:12]
+        split_decoded[-1] = "..."
+    for line in split_decoded:
+        imgdraw.text((margin, offset), line, font=font, fill="#FFFFFF")
+        offset += font_size + 7
     # imgdraw.text((100,100), metar.code, (0,0,0), font=font)
     # imgdraw.text((654,231), "KLOU", (0,0,0), font=font)
     return img
