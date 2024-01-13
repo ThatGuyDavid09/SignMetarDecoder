@@ -24,7 +24,7 @@ class PiSignageDeployer:
             # Makes request to get auth token 
             self.base_url = "https://flightclub502.pisignage.com/api"
             login_data = {
-                "email": "karen.harrell@flightclub502.org",
+                "email": "info@flightclub502.org",
                 "password": password,
                 "getToken": True
             }
