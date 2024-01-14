@@ -183,7 +183,7 @@ def create_image(metar):
     runways = runways.resize((rwy_size_base, int(runways.size[1] * (rwy_size_base / runways.size[0]))))
     img.alpha_composite(runways, rwy_pos_base)
 
-    arrow = Image.open("image_bases/black_arrow.png")
+    arrow = Image.open("image_bases/white_arrow.png")
     arrow = arrow.resize((150, int(arrow.size[1] * (150 / arrow.size[0]))))
     # Rotates arrow in wind direction, taking into account the way the arrow is already facing
     arrow = arrow.rotate(-(90 + metar.wind_dir.value()), expand=True)
