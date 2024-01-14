@@ -72,6 +72,14 @@ def get_most_cloud(metar):
 def compose_metar_string(metar: Metar):
     """
     Given METAR, decodes it and converts it into a string.
+    Time:
+    Flight condition:
+    Wind:
+    Visibility:
+    Sky:
+    Temp/dew point:
+    Altimiter:
+    Weather
     """
     conditions = get_flight_condition(metar)
     if conditions == "LIFR":
@@ -80,10 +88,8 @@ def compose_metar_string(metar: Metar):
     metar_txt = ""
     metar_txt += f"Time: {metar.time.strftime(r'%H:%M')} Z\n"
     metar_txt += f"Flight condition: {conditions}\n" 
-    metar_txt += f"Temp: {round(metar.temp.value())} °C, Dew point: {round(metar.dewpt.value())} °C\n"
     metar_txt += f"Wind: {metar.wind()}\n"
     metar_txt += f"Visibility: {metar.visibility()}\n"
-    metar_txt += f"Altimeter: {metar.press.value():.2f} inHg\n"
 
     sky_mapping = {
         "CLR": "clear",
@@ -106,6 +112,9 @@ def compose_metar_string(metar: Metar):
             else:
                 # Spaces account for font differences
                 metar_txt += f"        {sky_mapping[cond[0]]} at {format(int(cond[1].value()), ',')} ft\n"
+
+    metar_txt += f"Temp: {round(metar.temp.value())} °C, Dew point: {round(metar.dewpt.value())} °C\n"
+    metar_txt += f"Altimeter: {metar.press.value():.2f} inHg\n"
 
     if metar.present_weather():
         for i, weather in enumerate(metar.present_weather().split("; ")):
