@@ -149,6 +149,7 @@ def get_metar():
     #    "METAR KLOU 021753Z 06008G22KT 10SM +RA -TSRA FZFG FZHZ FZBR FEW123 OVC456 02/M03 A3029 RMK AO2 SLP261 T00221028 10028 20011 58016")
     # metar = Metar(
     #    "METAR KLOU 021753Z 09008G22KT 10SM  FEW123 OVC456 02/M03 A3029 RMK AO2 SLP261 T00221028 10028 20011 58016")
+    # metar = Metar("KLOU 311453Z VRB05KT 10SM FEW013 BKN044 04/02 A3019 RMK AO2 SLP227 T00440017 51011")
 
     # metar_decoded = metar.string()
     return metar
@@ -183,30 +184,32 @@ def create_image(metar):
     runways = runways.resize((rwy_size_base, int(runways.size[1] * (rwy_size_base / runways.size[0]))))
     img.alpha_composite(runways, rwy_pos_base)
 
-    arrow = Image.open("image_bases/white_arrow.png")
-    arrow = arrow.resize((150, int(arrow.size[1] * (150 / arrow.size[0]))))
-    # Rotates arrow in wind direction, taking into account the way the arrow is already facing
-    arrow = arrow.rotate(-(90 + metar.wind_dir.value()), expand=True)
+    if metar.wind_dir is not None:
 
-    rwy_width, rwy_height = runways.size
-    rwy_pos_x = rwy_pos_base[0] + rwy_width // 2
-    rwy_pos_y = rwy_pos_base[1] + rwy_height // 2
+        arrow = Image.open("image_bases/white_arrow.png")
+        arrow = arrow.resize((150, int(arrow.size[1] * (150 / arrow.size[0]))))
+        # Rotates arrow in wind direction, taking into account the way the arrow is already facing
+        arrow = arrow.rotate(-(90 + metar.wind_dir.value()), expand=True)
 
-    arrow_width, arrow_height = arrow.size
+        rwy_width, rwy_height = runways.size
+        rwy_pos_x = rwy_pos_base[0] + rwy_width // 2
+        rwy_pos_y = rwy_pos_base[1] + rwy_height // 2
 
-    # Calculate the center coordinates of the image to paste
-    arrow_center_x = arrow_width // 2
-    arrow_center_y = arrow_height // 2
+        arrow_width, arrow_height = arrow.size
 
-    # Offsets arrow from center of runway image based on wind direction
-    base_center = [rwy_pos_x - arrow_center_x, rwy_pos_y - arrow_center_y]
-    offset_amt = 330
-    wind_radians = math.radians(metar.wind_dir.value())
-    base_center[0] += round(offset_amt * math.sin(wind_radians))
-    base_center[1] -= round(offset_amt * math.cos(wind_radians))
-    base_center = tuple(base_center)
+        # Calculate the center coordinates of the image to paste
+        arrow_center_x = arrow_width // 2
+        arrow_center_y = arrow_height // 2
 
-    img.alpha_composite(arrow, base_center)
+        # Offsets arrow from center of runway image based on wind direction
+        base_center = [rwy_pos_x - arrow_center_x, rwy_pos_y - arrow_center_y]
+        offset_amt = 330
+        wind_radians = math.radians(metar.wind_dir.value())
+        base_center[0] += round(offset_amt * math.sin(wind_radians))
+        base_center[1] -= round(offset_amt * math.cos(wind_radians))
+        base_center = tuple(base_center)
+
+        img.alpha_composite(arrow, base_center)
 
     font_size = 50
     font = ImageFont.truetype(r"C:/Windows/Fonts/Timesbd.ttf", font_size)
