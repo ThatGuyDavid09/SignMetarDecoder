@@ -184,7 +184,7 @@ def create_image(metar):
     runways = runways.resize((rwy_size_base, int(runways.size[1] * (rwy_size_base / runways.size[0]))))
     img.alpha_composite(runways, rwy_pos_base)
 
-    if metar.wind_dir is not None:
+    if metar.wind_dir is not None and metar.wind_speed is not None and metar.wind_speed.value() > 0:
 
         arrow = Image.open("image_bases/white_arrow.png")
         arrow = arrow.resize((150, int(arrow.size[1] * (150 / arrow.size[0]))))
