@@ -12,6 +12,15 @@ from PIL import Image, ImageDraw, ImageFont
 from PiSignageDeployer import PiSignageDeployer
 
 
+def is_out_of_date(metar: Metar):
+    """
+    Given METAR, returns whether the metar is more than two hours old."""
+    metar_date = metar.time
+    now = datetime.now()
+    hours_diff = (now - metar_date).total_seconds() // 3600
+    return hours_diff > 2
+
+
 def get_ceiling(metar):
     """
     Given METAR, calculates highest ceiling. A ceiling is a cloud layer of Broken or Overcast.  
@@ -86,6 +95,10 @@ def compose_metar_string(metar: Metar):
         conditions = "Low IFR"
     
     metar_txt = ""
+
+    if is_out_of_date(metar):
+        metar_txt += "METAR out of date! Weather station unresponsive.\n\n"
+
     metar_txt += f"Time: {metar.time.strftime(r'%H:%M')} Z\n"
     metar_txt += f"Flight condition: {conditions}\n" 
     metar_txt += f"Wind: {metar.wind()}\n"
