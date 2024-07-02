@@ -99,9 +99,19 @@ def compose_metar_string(metar: Metar):
     if is_out_of_date(metar):
         metar_txt += "METAR out of date! Weather station unresponsive.\n\n"
 
+    # Adds direction of wind in degrees in parentheses after compass direction if needed
+    # From "ESE" to "ESE (105)"
+    wind_dir = int(metar.wind_dir.value()) if metar.wind_dir else None
+    wind_spd = metar.wind_speed.value() if metar.wind_speed else None
+    wind_str = metar.wind()
+    if wind_dir is not None and wind_spd is not None and wind_spd > 0:
+        wind_str_lst = wind_str.split()
+        wind_str_lst[0] += f" ({wind_dir:03d})"
+        wind_str = " ".join(wind_str_lst)
+
     metar_txt += f"Time: {metar.time.strftime(r'%H:%M')} Z\n"
     metar_txt += f"Flight condition: {conditions}\n" 
-    metar_txt += f"Wind: {metar.wind()}\n"
+    metar_txt += f"Wind: {wind_str}\n"
     metar_txt += f"Visibility: {metar.visibility()}\n"
 
     sky_mapping = {
@@ -155,6 +165,7 @@ def get_metar():
     metar_req_text = metar_req.text
     # Website returns metar date and actual metar on different lines, so this extracts metar only
     metar_date, metar_text = [i.strip() for i in metar_req_text.strip().split("\n")]
+
     metar = Metar(metar_text)
 
     # Commented out, this is for testing
@@ -199,7 +210,13 @@ def create_image(metar):
 
     if metar.wind_dir is not None and metar.wind_speed is not None and metar.wind_speed.value() > 0:
 
-        arrow = Image.open("image_bases/white_arrow.png")
+        # This doesn't work because the text is on the arrow image itself. Too lazy to fix.
+        # Flips arrow if wind is between 0 and 180 to maintain readability
+        if 0 < metar.wind_dir.value() < 180:
+            arrow = Image.open("image_bases/arrow_reverse.png")
+        else:
+            arrow = Image.open("image_bases/arrow_normal.png")
+
         arrow = arrow.resize((150, int(arrow.size[1] * (150 / arrow.size[0]))))
         # Rotates arrow in wind direction, taking into account the way the arrow is already facing
         arrow = arrow.rotate(-(90 + metar.wind_dir.value()), expand=True)
@@ -294,7 +311,7 @@ def main():
     img.save(f'img_out/latest_metar.png')
     print(f"[INFO {str(datetime.now())}] METAR image saved")
 
-    deploy_pisignage("img_out/latest_metar.png")
+    # deploy_pisignage("img_out/latest_metar.png")
     print(f"[INFO {str(datetime.now())}] METAR image deployed to PiSignage")
     print(f"[INFO {str(datetime.now())}] Exiting")
     print("---------------------------------------------")
