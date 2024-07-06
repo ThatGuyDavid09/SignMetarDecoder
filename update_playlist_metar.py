@@ -276,7 +276,7 @@ def deploy_pisignage(image_path):
     Deploys the image to PiSignage
     """
     deployer = PiSignageDeployer()
-    deployer.deploy_image(image_path)
+    return deployer.deploy_image(image_path)
 
 
 def check_log_file_size():
@@ -311,8 +311,12 @@ def main():
     img.save(f'img_out/latest_metar.png')
     print(f"[INFO {str(datetime.now())}] METAR image saved")
 
-    # deploy_pisignage("img_out/latest_metar.png")
-    print(f"[INFO {str(datetime.now())}] METAR image deployed to PiSignage")
+    deploy_ok = deploy_pisignage("img_out/latest_metar.png")
+
+    if not deploy_ok:
+        print(f"[ERROR {str(datetime.now())}] Pisignage METAR failed to deploy")
+    else:
+        print(f"[INFO {str(datetime.now())}] METAR image deployed to PiSignage")
     print(f"[INFO {str(datetime.now())}] Exiting")
     print("---------------------------------------------")
 

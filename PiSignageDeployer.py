@@ -295,12 +295,14 @@ class PiSignageDeployer:
             headers=self.headers,
             json=deploy_data,
         )
+
         if deploy_r.ok:
             print(f"[INFO {str(datetime.now())}] Playlist deployed")
         else:
             print(f"[ERROR {str(datetime.now())}] Playlist deploy fail, status {deploy_r.status_code}")
             print(deploy_r.text)
-            sys.exit(-1)
+            # sys.exit(-1)
+        return deploy_r.ok
         # deploy_json = json.loads(deploy_r.text)
         # print(deploy_r.text)
 
