@@ -9,6 +9,8 @@ import requests
 import sys
 from PIL import Image, ImageDraw, ImageFont
 
+from dateutil import tz
+
 from PiSignageDeployer import PiSignageDeployer
 
 
@@ -109,7 +111,13 @@ def compose_metar_string(metar: Metar):
         wind_str_lst[0] += f" ({wind_dir:03d})"
         wind_str = " ".join(wind_str_lst)
 
-    metar_txt += f"Time: {metar.time.strftime(r'%H:%M')} Z\n"
+    # Convert UTC time (from metar) to local time
+    utc_zone = tz.tzutc()
+    local_zone = tz.tzlocal()
+    utc_time = metar.time.replace(tzinfo=utc_zone)
+    local_time = utc_time.astimezone(local_zone)
+
+    metar_txt += f"Time: {local_time.strftime(r'%H:%M')} ({utc_time.strftime(r'%H:%M')} Z) on {utc_time.strftime(r'%m/%d')}\n"
     metar_txt += f"Flight condition: {conditions}\n" 
     metar_txt += f"Wind: {wind_str}\n"
     metar_txt += f"Visibility: {metar.visibility()}\n"
@@ -165,7 +173,6 @@ def get_metar():
     metar_req_text = metar_req.text
     # Website returns metar date and actual metar on different lines, so this extracts metar only
     metar_date, metar_text = [i.strip() for i in metar_req_text.strip().split("\n")]
-
     metar = Metar(metar_text)
 
     # Commented out, this is for testing
