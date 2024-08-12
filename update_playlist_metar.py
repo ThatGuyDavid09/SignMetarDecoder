@@ -3,6 +3,7 @@ import math
 import os
 import textwrap
 from io import BytesIO
+import traceback
 
 from metar.Metar import Metar
 import requests
@@ -196,89 +197,116 @@ def get_metar():
     return metar
 
 
-def create_image(metar):
+def create_image(metar, is_error=False):
     """
     Generates the actual metar image
-    """
-    flight_condition = get_flight_condition(metar)
-    metar_decoded = compose_metar_string(metar)
-    print(f"[INFO {str(datetime.now())}] METAR decoded")
 
-    # template = f"image_bases/{flight_condition}.png"
+    metar: the METAR object to use as a base
+    is_error: whether the image should be an error message
+    """
     template = f"image_bases/metar_base.png"
     img = Image.open(template, 'r').convert('RGBA')
     imgdraw = ImageDraw.Draw(img)
-
-    # icon = icon.resize((500, 500))
-    # img.alpha_composite(icon, (700, 100))
-
-    # cloud = get_most_cloud(metar)
-
-    # cloud_img = Image.open(f"image_bases/{cloud}.png")
-
-    # # Cloud image is same size as base image, so just draw corrent cloud layer on top
-    # img.alpha_composite(cloud_img, (0, 0))
-
-    runways = Image.open("image_bases/KLOU_runways.png")
-    rwy_size_base = 400
-    rwy_pos_base = (1200, 450)
-    runways = runways.resize((rwy_size_base, int(runways.size[1] * (rwy_size_base / runways.size[0]))))
-    img.alpha_composite(runways, rwy_pos_base)
-
-    if metar.wind_dir is not None and metar.wind_speed is not None and metar.wind_speed.value() > 0:
-
-        # This doesn't work because the text is on the arrow image itself. Too lazy to fix.
-        # Flips arrow if wind is between 0 and 180 to maintain readability
-        if 0 < metar.wind_dir.value() < 180:
-            arrow = Image.open("image_bases/arrow_reverse.png")
-        else:
-            arrow = Image.open("image_bases/arrow_normal.png")
-
-        arrow = arrow.resize((150, int(arrow.size[1] * (150 / arrow.size[0]))))
-        # Rotates arrow in wind direction, taking into account the way the arrow is already facing
-        arrow = arrow.rotate(-(90 + metar.wind_dir.value()), expand=True)
-
-        rwy_width, rwy_height = runways.size
-        rwy_pos_x = rwy_pos_base[0] + rwy_width // 2
-        rwy_pos_y = rwy_pos_base[1] + rwy_height // 2
-
-        arrow_width, arrow_height = arrow.size
-
-        # Calculate the center coordinates of the image to paste
-        arrow_center_x = arrow_width // 2
-        arrow_center_y = arrow_height // 2
-
-        # Offsets arrow from center of runway image based on wind direction
-        base_center = [rwy_pos_x - arrow_center_x, rwy_pos_y - arrow_center_y]
-        offset_amt = 330
-        wind_radians = math.radians(metar.wind_dir.value())
-        base_center[0] += round(offset_amt * math.sin(wind_radians))
-        base_center[1] -= round(offset_amt * math.cos(wind_radians))
-        base_center = tuple(base_center)
-
-        img.alpha_composite(arrow, base_center)
 
     font_size = 50
     font = ImageFont.truetype(r"C:/Windows/Fonts/Timesbd.ttf", font_size)
 
     margin = offset = 100
-    # Wraps text of METAR to ensure it fits on image
-    for line in textwrap.wrap(metar.code, width=60):
-        imgdraw.text((margin, offset), line, font=font, fill="#FFFFFF")
-        offset += font_size
 
-    offset += font_size
-    # Writes each line of font
-    split_decoded = metar_decoded.split("\n")
-    if len(split_decoded) > 12:
-        split_decoded = split_decoded[:12]
-        split_decoded[-1] = "..."
-    for line in split_decoded:
-        imgdraw.text((margin, offset), line, font=font, fill="#FFFFFF")
+    if is_error:
+        print(f"[ERROR {str(datetime.now())}] Error detected, generating error image")
+
+        large_font_size = 70
+        large_font = ImageFont.truetype(r"C:/Windows/Fonts/Timesbd.ttf", large_font_size)
+
+        metar_error = "Error detected when generating METAR image!\n"
+        metar_error += f"Generated time {str(datetime.now())}\n"
+        metar_error += "Please contact software maintainer. More info in logs."
+
+        for line in metar_error.split("\n"):
+            imgdraw.text((margin, offset), line, font=large_font, fill="#FFFFFF")
+            offset += large_font_size + 7
         offset += font_size + 7
-    # imgdraw.text((100,100), metar.code, (0,0,0), font=font)
-    # imgdraw.text((654,231), "KLOU", (0,0,0), font=font)
-    return img
+
+        for line in traceback.format_exc().split("\n"):
+            imgdraw.text((margin, offset), line, font=font, fill="#FFFFFF")
+            offset += font_size + 7
+        return img
+
+    else:
+        metar_decoded = compose_metar_string(metar)
+        print(f"[INFO {str(datetime.now())}] METAR decoded")
+
+        # template = f"image_bases/{flight_condition}.png"
+        
+        # icon = icon.resize((500, 500))
+        # img.alpha_composite(icon, (700, 100))
+
+        # cloud = get_most_cloud(metar)
+
+        # cloud_img = Image.open(f"image_bases/{cloud}.png")
+
+        # # Cloud image is same size as base image, so just draw corrent cloud layer on top
+        # img.alpha_composite(cloud_img, (0, 0))
+
+        runways = Image.open("image_bases/KLOU_runways.png")
+        rwy_size_base = 400
+        rwy_pos_base = (1200, 450)
+        runways = runways.resize((rwy_size_base, int(runways.size[1] * (rwy_size_base / runways.size[0]))))
+        img.alpha_composite(runways, rwy_pos_base)
+
+        if metar.wind_dir is not None and metar.wind_speed is not None and metar.wind_speed.value() > 0:
+
+            # This doesn't work because the text is on the arrow image itself. Too lazy to fix.
+            # Flips arrow if wind is between 0 and 180 to maintain readability
+            if 0 < metar.wind_dir.value() < 180:
+                arrow = Image.open("image_bases/arrow_reverse.png")
+            else:
+                arrow = Image.open("image_bases/arrow_normal.png")
+
+            arrow = arrow.resize((150, int(arrow.size[1] * (150 / arrow.size[0]))))
+            # Rotates arrow in wind direction, taking into account the way the arrow is already facing
+            arrow = arrow.rotate(-(90 + metar.wind_dir.value()), expand=True)
+
+            rwy_width, rwy_height = runways.size
+            rwy_pos_x = rwy_pos_base[0] + rwy_width // 2
+            rwy_pos_y = rwy_pos_base[1] + rwy_height // 2
+
+            arrow_width, arrow_height = arrow.size
+
+            # Calculate the center coordinates of the image to paste
+            arrow_center_x = arrow_width // 2
+            arrow_center_y = arrow_height // 2
+
+            # Offsets arrow from center of runway image based on wind direction
+            base_center = [rwy_pos_x - arrow_center_x, rwy_pos_y - arrow_center_y]
+            offset_amt = 330
+            wind_radians = math.radians(metar.wind_dir.value())
+            base_center[0] += round(offset_amt * math.sin(wind_radians))
+            base_center[1] -= round(offset_amt * math.cos(wind_radians))
+            base_center = tuple(base_center)
+
+            img.alpha_composite(arrow, base_center)
+
+    
+        # Wraps text of METAR to ensure it fits on image
+        for line in textwrap.wrap(metar.code, width=60):
+            imgdraw.text((margin, offset), line, font=font, fill="#FFFFFF")
+            offset += font_size
+
+        offset += font_size
+        # Writes each line of font
+        split_decoded = metar_decoded.split("\n")
+        if len(split_decoded) > 12:
+            split_decoded = split_decoded[:12]
+            split_decoded[-1] = "..."
+        for line in split_decoded:
+            imgdraw.text((margin, offset), line, font=font, fill="#FFFFFF")
+            offset += font_size + 7
+        # imgdraw.text((100,100), metar.code, (0,0,0), font=font)
+        # imgdraw.text((654,231), "KLOU", (0,0,0), font=font)
+
+        return img
 
 
 # def get_current_weather_icon(weather_fetcher):
@@ -324,7 +352,15 @@ def main():
     # print(metar_decoded)
     # print(most_cloud)
     # print(template)
-    img = create_image(metar)
+    try:
+        img = create_image(metar)
+    except Exception as e:
+        # Some error has prevented the METAR image from being properly generated,
+        # so we will deploy another error message for extra info
+
+        # Print exception for logging reasons
+        print(traceback.format_exc())
+        img = create_image(metar, True)
     img.save(f'img_out/latest_metar.png')
     print(f"[INFO {str(datetime.now())}] METAR image saved")
 
