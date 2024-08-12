@@ -40,6 +40,9 @@ def get_flight_condition(metar):
     """
     Given METAR, calculates whether flight is VFR, MVFR, IFR, or LIFR
     """
+    if metar.vis is None:
+        return "unknown"
+    
     visibility = metar.vis.value() # In miles
     ceiling = get_ceiling(metar) # In feet
 
@@ -144,8 +147,15 @@ def compose_metar_string(metar: Metar):
                 # Spaces account for font differences
                 metar_txt += f"        {sky_mapping[cond[0]]} at {format(int(cond[1].value()), ',')} ft\n"
 
-    metar_txt += f"Temp: {round(metar.temp.value())} °C, Dew point: {round(metar.dewpt.value())} °C\n"
-    metar_txt += f"Altimeter: {metar.press.value():.2f} inHg\n"
+    if metar.temp is not None:
+        metar_txt += f"Temp: {round(metar.temp.value())} °C, Dew point: {round(metar.dewpt.value())} °C\n"
+    else:
+        metar_txt += "Temp: missing"
+
+    if metar.press is not None:
+        metar_txt += f"Altimeter: {metar.press.value():.2f} inHg\n"
+    else:
+        metar_txt += "Altimeter: missing"
 
     if metar.present_weather():
         for i, weather in enumerate(metar.present_weather().split("; ")):
