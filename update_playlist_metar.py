@@ -104,7 +104,7 @@ def compose_metar_string(metar: Metar):
     metar_txt = ""
 
     if is_out_of_date(metar):
-        print(f"[WARNING {str(datetime.now())}] METAR date recieved more than 2 hours old. Weather station
+        print(f"[WARNING {str(datetime.now())}] METAR date recieved more than 2 hours old. Weather station \
               may be unresponsive.")
         metar_txt += "METAR out of date! Weather station likely unresponsive.\n\n"
 
