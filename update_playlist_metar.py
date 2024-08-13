@@ -17,7 +17,8 @@ from PiSignageDeployer import PiSignageDeployer
 
 def is_out_of_date(metar: Metar):
     """
-    Given METAR, returns whether the metar is more than two hours old."""
+    Given METAR, returns whether the metar is more than two hours old.
+    """
     metar_date = metar.time
     now = datetime.now()
     hours_diff = (now - metar_date).total_seconds() // 3600
