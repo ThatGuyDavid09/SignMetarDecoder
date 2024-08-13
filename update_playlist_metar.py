@@ -104,7 +104,9 @@ def compose_metar_string(metar: Metar):
     metar_txt = ""
 
     if is_out_of_date(metar):
-        metar_txt += "METAR out of date! Weather station unresponsive.\n\n"
+        print(f"[WARNING {str(datetime.now())}] METAR date recieved more than 2 hours old. Weather station
+              may be unresponsive.")
+        metar_txt += "METAR out of date! Weather station likely unresponsive.\n\n"
 
     # Adds direction of wind in degrees in parentheses after compass direction if needed
     # From "ESE" to "ESE (105)"
